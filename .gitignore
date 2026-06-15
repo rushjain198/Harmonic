@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+.vite/
+
+# tooling artifacts
+.playwright-mcp/
+harmonic-*.png
+chain-*.png
+v2-*.png
+
+# python backend
+backend/.venv/
+**/__pycache__/
+
+# scratch clone of the upstream Harmonic repo (source for backend/ + public/play/)
+../_harmonic-src/

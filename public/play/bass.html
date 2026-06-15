@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bass Guitar - AirJam</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ============================================================
+           HARMONIC · BASS, Neo-brutalism + opaque glassmorphism
+           Accent (musical red): #dc2626
+           Restyle only. No tracking/audio JS or ids touched.
+           ============================================================ */
+        :root {
+            --ink: #17150f;
+            --cream: #f6f1e7;
+            --accent: #dc2626;
+            --accent-deep: #b91c1c;
+            --paper: #fffdf8;
+            --glass: rgba(255, 255, 255, 0.9);
+
+            /* per-string flat fills */
+            --str-e2: #f97316;
+            /* orange */
+            --str-a2: #16a34a;
+            /* green */
+            --str-d2: #2563eb;
+            /* blue */
+            --str-g2: #eab308;
+            /* yellow */
+
+            --shadow-hard: 6px 6px 0 var(--ink);
+            --shadow-hard-sm: 4px 4px 0 var(--ink);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+        }
+
+        body {
+            overflow: hidden;
+            font-family: 'Hanken Grotesk', system-ui, sans-serif;
+            color: var(--ink);
+            background-color: var(--cream);
+            /* warm cream + subtle dot texture, never flat white */
+            background-image:
+                radial-gradient(var(--ink) 1.1px, transparent 1.1px);
+            background-size: 22px 22px;
+            background-position: -11px -11px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Hide the legacy animated bg from styles.css */
+        .animated-bg {
+            display: none !important;
+        }
+
+        #bass-page.page,
+        #bass-page.page.active {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            height: 100vh;
+            padding: 0;
+            background: transparent;
+        }
+
+        /* ── Top control bar (neo-brutal band) ── */
+        .controls-bar {
+            position: relative;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 14px 22px;
+            background: var(--accent);
+            border-bottom: 3px solid var(--ink);
+            box-shadow: 0 4px 0 var(--ink);
+        }
+
+        .controls-left,
+        .controls-center,
+        .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        /* Back button */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 9px 16px;
+            background: var(--paper);
+            color: var(--ink);
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 0.92rem;
+            letter-spacing: -0.01em;
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+
+        .back-btn:hover {
+            background: #ffe08a;
+        }
+
+        .back-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Instrument indicator */
+        .instrument-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: var(--paper);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+        }
+
+        .indicator-animation {
+            width: 16px;
+            height: 16px;
+            border-radius: 5px;
+            border: 2px solid var(--ink);
+            background: var(--accent) !important;
+        }
+
+        .indicator-icon {
+            display: inline-flex;
+            color: var(--ink);
+        }
+
+        .indicator-text {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 900;
+            font-size: 1rem;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+        }
+
+        /* Center status chip (opaque glass) */
+        .stats-display {
+            display: flex;
+            align-items: center;
+        }
+
+        .stat-item {
+            display: inline-flex !important;
+            flex-direction: row !important;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 16px;
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+            position: static !important;
+        }
+
+        .stat-label {
+            position: static !important;
+            opacity: 1 !important;
+            font-weight: 700;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b6354 !important;
+            line-height: 1;
+        }
+
+        .stat-value {
+            position: static !important;
+            font-weight: 800;
+            font-size: 0.92rem;
+            letter-spacing: -0.01em;
+            line-height: 1;
+            color: var(--accent-deep) !important;
+        }
+
+        .stat-value::before {
+            content: "";
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            margin-right: 6px;
+            border-radius: 50%;
+            border: 2px solid var(--ink);
+            background: var(--accent);
+            vertical-align: middle;
+            transform: translateY(-1px);
+        }
+
+        /* Camera-active badge (opaque glass) */
+        .status-badge {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 16px !important;
+            background: var(--glass) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 3px solid var(--ink) !important;
+            border-radius: var(--radius-sm) !important;
+            box-shadow: var(--shadow-hard-sm);
+            color: var(--ink) !important;
+            font-weight: 800;
+            font-size: 0.9rem;
+            letter-spacing: -0.01em;
+        }
+
+        .status-badge .live-dot {
+            width: 11px !important;
+            height: 11px !important;
+            background: var(--accent) !important;
+            border: 2px solid var(--ink);
+            border-radius: 50% !important;
+            animation: pulse 1.6s infinite;
+        }
+
+        /* ── Bass info bar (strings + pitch), neo-brutal sub-band ── */
+        .bass-info-bar {
+            position: relative;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding: 14px 22px;
+            background: var(--paper);
+            border-bottom: 3px solid var(--ink);
+        }
+
+        .bass-info-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* String pills, chunky neo-brutal chips */
+        .bass-string-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 15px;
+            border-radius: var(--radius-sm);
+            font-weight: 800;
+            font-size: 0.92rem;
+            letter-spacing: -0.01em;
+            color: var(--ink);
+            cursor: pointer;
+            user-select: none;
+            border: 3px solid var(--ink);
+            box-shadow: var(--shadow-hard-sm);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+
+        .bass-string-pill::before {
+            content: "";
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            border: 2px solid var(--ink);
+            background: currentColor;
+            flex: none;
+        }
+
+        .bass-string-pill.e2 {
+            background: var(--str-e2);
+        }
+
+        .bass-string-pill.a2 {
+            background: var(--str-a2);
+            color: #ffffff;
+        }
+
+        .bass-string-pill.d2 {
+            background: var(--str-d2);
+            color: #ffffff;
+        }
+
+        .bass-string-pill.g2 {
+            background: var(--str-g2);
+        }
+
+        .bass-string-pill:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0 var(--ink);
+        }
+
+        .bass-string-pill:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+
+        /* The script toggles .active when a string is plucked */
+        .bass-string-pill.active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 var(--ink), 0 0 0 4px var(--accent);
+            filter: saturate(1.3) brightness(1.04);
+        }
+
+        .bass-string-pill .pill-status {
+            font-weight: 700;
+            font-size: 0.62rem;
+            letter-spacing: 0.06em;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(23, 21, 15, 0.16);
+            color: var(--ink);
+        }
+
+        .bass-string-pill.a2 .pill-status,
+        .bass-string-pill.d2 .pill-status {
+            background: rgba(255, 255, 255, 0.32);
+            color: #ffffff;
+        }
+
+        .bass-string-pill.active .pill-status {
+            background: var(--ink);
+            color: var(--cream);
+        }
+
+        /* Pitch display (opaque glass) */
+        .pitch-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 11px;
+            padding: 9px 16px;
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: var(--ink);
+        }
+
+        .pitch-display .pitch-label {
+            font-weight: 600;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6b6354;
+        }
+
+        .pitch-display .pitch-value {
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: var(--accent-deep);
+        }
+
+        .pitch-bar-mini {
+            width: 104px;
+            height: 12px;
+            background: var(--cream);
+            border: 2px solid var(--ink);
+            border-radius: 999px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pitch-bar-mini-fill {
+            height: 100%;
+            width: 33%;
+            background: var(--accent);
+            border-radius: 999px;
+            transition: width 0.15s ease;
+        }
+
+        /* Last pluck (opaque glass) */
+        .last-pluck-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 15px;
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+            font-weight: 700;
+            font-size: 0.84rem;
+            color: #6b6354;
+        }
+
+        .last-pluck-display .pluck-note {
+            font-weight: 800;
+            color: var(--accent-deep);
+        }
+
+        /* ── Camera frame (bold neo-brutal frame) ── */
+        .ar-studio-container {
+            width: auto;
+            flex: 1;
+            min-height: 0;
+            margin: 22px;
+            position: relative;
+            overflow: hidden;
+            background: #0c0a06 !important;
+            border: 4px solid var(--ink);
+            border-radius: 20px;
+            box-shadow:
+                10px 10px 0 var(--ink),
+                0 0 0 4px rgba(220, 38, 38, 0.0),
+                0 0 46px rgba(220, 38, 38, 0.28);
+        }
+
+        /* Accent glow ring on the camera frame */
+        .ar-studio-container::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 16px;
+            pointer-events: none;
+            box-shadow: inset 0 0 0 3px rgba(220, 38, 38, 0.45);
+        }
+
+        #bassVideo {
+            border-radius: 16px;
+        }
+
+        /* ── Camera denied / unavailable retry overlay (neo-brutal + opaque glass) ── */
+        .cam-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            border-radius: 16px;
+            background:
+                radial-gradient(120% 120% at 50% 0%, rgba(220, 38, 38, 0.22), transparent 60%),
+                rgba(12, 10, 6, 0.86);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .cam-overlay[hidden] {
+            display: none !important;
+        }
+
+        .cam-overlay-card {
+            width: min(420px, 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 14px;
+            padding: 28px 26px;
+            background: var(--paper);
+            border: 4px solid var(--ink);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hard);
+        }
+
+        .cam-overlay-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 58px;
+            height: 58px;
+            color: var(--ink);
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: 14px;
+            box-shadow: var(--shadow-hard-sm);
+        }
+
+        .cam-overlay-heading {
+            margin: 4px 0 0;
+            font-weight: 900;
+            font-size: 1.32rem;
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            color: var(--ink);
+        }
+
+        .cam-overlay-help {
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.94rem;
+            line-height: 1.45;
+            color: #6b6354;
+        }
+
+        .cam-overlay-btn {
+            margin-top: 6px;
+            padding: 13px 26px;
+            font-family: inherit;
+            font-weight: 900;
+            font-size: 1.02rem;
+            letter-spacing: -0.01em;
+            color: var(--paper);
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hard-sm);
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+
+        .cam-overlay-btn:hover {
+            background: var(--accent-deep);
+        }
+
+        .cam-overlay-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+
+        .cam-overlay-btn:focus-visible {
+            outline: 3px solid var(--ink);
+            outline-offset: 3px;
+        }
+
+        /* ── Focus visibility ── */
+        a:focus-visible,
+        .bass-string-pill:focus-visible {
+            outline: 3px solid var(--ink);
+            outline-offset: 3px;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.45;
+                transform: scale(0.85);
+            }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1024px) {
+            .ar-studio-container {
+                margin: 16px;
+                box-shadow: 8px 8px 0 var(--ink), 0 0 38px rgba(220, 38, 38, 0.26);
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .controls-bar,
+            .bass-info-bar {
+                padding: 12px 16px;
+                gap: 12px;
+            }
+
+            .controls-center {
+                order: 3;
+            }
+
+            .ar-studio-container {
+                margin: 14px;
+            }
+
+            .indicator-text {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 375px) {
+
+            .controls-bar,
+            .bass-info-bar {
+                padding: 10px 12px;
+            }
+
+            .bass-string-pill {
+                padding: 8px 12px;
+                font-size: 0.86rem;
+            }
+
+            .pitch-bar-mini {
+                width: 72px;
+            }
+
+            .ar-studio-container {
+                margin: 10px;
+                box-shadow: 6px 6px 0 var(--ink), 0 0 30px rgba(220, 38, 38, 0.24);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            .bass-string-pill,
+            .back-btn,
+            .status-badge .live-dot,
+            .pitch-bar-mini-fill {
+                animation: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Bass Guitar Page -->
+    <div id="bass-page" class="page active">
+        <!-- Controls Bar (neo-brutal accent band) -->
+        <div class="controls-bar">
+            <div class="controls-left">
+                <a href="/?studio=1" class="back-btn">
+                    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2.4"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <span>Studio</span>
+                </a>
+                <div class="instrument-indicator">
+                    <div class="indicator-animation"></div>
+                    <span class="indicator-text">
+                        <span class="indicator-icon" aria-hidden="true">
+                            <!-- bass / music note glyph -->
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="2.2"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                                <circle cx="6" cy="18" r="3" stroke="currentColor" stroke-width="2.2" />
+                                <circle cx="17" cy="16" r="3" stroke="currentColor" stroke-width="2.2" />
+                            </svg>
+                        </span>
+                        Bass Guitar
+                    </span>
+                </div>
+            </div>
+            <div class="controls-center">
+                <div class="stats-display">
+                    <div class="stat-item">
+                        <span class="stat-label">Status</span>
+                        <span class="stat-value">AR Active</span>
+                    </div>
+                </div>
+            </div>
+            <div class="controls-right">
+                <div class="status-badge">
+                    <div class="live-dot"></div>
+                    <span>Camera Active</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bass Info Bar (strings + pitch) -->
+        <div class="bass-info-bar">
+            <div class="bass-info-group">
+                <div class="bass-string-pill e2" id="card-0">E2 <span class="pill-status">IDLE</span></div>
+                <div class="bass-string-pill a2" id="card-1">A2 <span class="pill-status">IDLE</span></div>
+                <div class="bass-string-pill d2" id="card-2">D2 <span class="pill-status">IDLE</span></div>
+                <div class="bass-string-pill g2" id="card-3">G2 <span class="pill-status">IDLE</span></div>
+            </div>
+
+            <div class="bass-info-group">
+                <div class="pitch-display">
+                    <span class="pitch-label">Pitch</span>
+                    <div class="pitch-bar-mini">
+                        <div class="pitch-bar-mini-fill" id="pitch-fill"></div>
+                    </div>
+                    <span class="pitch-value" id="live-pitch">1.0x</span>
+                </div>
+            </div>
+
+            <div class="last-pluck-display">
+                Last: <span class="pluck-note" id="last-pluck-text">None</span>
+            </div>
+        </div>
+
+        <!-- Live camera + hand tracking (in-browser, no Streamlit) -->
+        <div class="ar-studio-container" style="position:relative;background:rgba(0,0,0,0.5);">
+            <video id="bassVideo" autoplay playsinline muted
+                style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);"></video>
+            <canvas id="bassCanvas"
+                style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas>
+
+            <!-- Camera denied / unavailable retry overlay (hidden until needed) -->
+            <div id="camOverlay" class="cam-overlay" hidden role="alertdialog" aria-live="polite"
+                aria-labelledby="camOverlayHeading">
+                <div class="cam-overlay-card">
+                    <div class="cam-overlay-icon" aria-hidden="true">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                            <path d="M2 7.5A1.5 1.5 0 0 1 3.5 6h9A1.5 1.5 0 0 1 14 7.5v9A1.5 1.5 0 0 1 12.5 18h-9A1.5 1.5 0 0 1 2 16.5v-9Z"
+                                stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" />
+                            <path d="M14 10.5 21 7v10l-7-3.5" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M3 3l18 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    <h2 id="camOverlayHeading" class="cam-overlay-heading">Turn on your camera to play Bass</h2>
+                    <p id="camOverlayHelp" class="cam-overlay-help">We need your webcam to track your hands. Click below
+                        and allow camera access when your browser asks.</p>
+                    <button type="button" id="camEnableBtn" class="cam-overlay-btn">Enable camera</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="jam-core.js"></script>
+    <script>
+        // ============================================================
+        // In-browser Bass engine: MediaPipe hand tracking + Web Audio.
+        // Pluck a string by flicking a fingertip down relative to its
+        // knuckle (same robust detection as the piano player).
+        //   Index -> E2, Middle -> A2, Ring -> D2, Pinky -> G2 (either hand)
+        // Vertical position sets the pitch (deep / normal / high).
+        // ============================================================
+        (function () {
+            const videoEl = document.getElementById('bassVideo');
+            const canvasEl = document.getElementById('bassCanvas');
+            const ctx = canvasEl.getContext('2d');
+
+            /* ── Audio ── */
+            let audioCtx = null, masterGain = null;
+            let bassSamplesLoaded = false;
+            const bassBuffers = {};
+            const BASS_FILES = {
+                'E2': 'Bass sounds/e2-bass.wav',
+                'A2': 'Bass sounds/a2-bass.wav',
+                'D2': 'Bass sounds/d-bass.wav',
+                'G2': 'Bass sounds/g-bass.wav'
+            };
+
+            async function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    masterGain = audioCtx.createGain();
+                    masterGain.gain.value = 0.9;
+                    masterGain.connect(audioCtx.destination);
+                    loadBassSamples();
+                }
+                if (audioCtx.state === 'suspended') {
+                    try { await audioCtx.resume(); } catch (e) { /* ignore */ }
+                }
+            }
+
+            async function loadBassSamples() {
+                if (bassSamplesLoaded) return;
+                await Promise.all(Object.entries(BASS_FILES).map(async ([note, url]) => {
+                    try {
+                        const r = await fetch(url);
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        bassBuffers[note] = await audioCtx.decodeAudioData(await r.arrayBuffer());
+                        console.log('[BASS] loaded', note);
+                    } catch (e) { console.error('[BASS] failed to load', note, e); }
+                }));
+                bassSamplesLoaded = true;
+            }
+
+            async function playBass(note, vel, speed = 1.0) {
+                await initAudio();
+                if (!bassSamplesLoaded) await loadBassSamples();
+                const buf = bassBuffers[note];
+                if (!buf) { console.warn('[BASS] no buffer for', note); return; }
+                if (audioCtx.state !== 'running') { try { await audioCtx.resume(); } catch (e) { } }
+
+                const t = audioCtx.currentTime;
+                const source = audioCtx.createBufferSource();
+                source.buffer = buf;
+                source.playbackRate.value = speed;
+                const peak = Math.max(0.1, Math.min(vel, 1)) * 1.0;
+                const g = audioCtx.createGain();
+                try {
+                    g.gain.setValueAtTime(0.0001, t);
+                    g.gain.exponentialRampToValueAtTime(peak, t + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+                } catch (e) { g.gain.value = peak; }
+                source.connect(g);
+                g.connect(masterGain);
+                try { source.start(t); } catch (e) { console.error('[BASS] start failed', e); }
+            }
+
+            // Unlock audio on first user gesture (browsers require it)
+            async function unlockAudio() {
+                await initAudio();
+                if (audioCtx && audioCtx.state === 'running') {
+                    ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'click'].forEach(
+                        ev => document.removeEventListener(ev, unlockAudio));
+                    console.log('[BASS] audio unlocked');
+                }
+            }
+            ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'click'].forEach(
+                ev => document.addEventListener(ev, unlockAudio));
+
+            /* ── Bass strings = horizontal lines across the screen ──
+               A note plays when any fingertip crosses a string line (strum). */
+            const FINGERTIPS = [4, 8, 12, 16, 20]; // all fingertips can strum
+            const STRINGS = [
+                { note: 'E2', y: 0.20, color: '#ff8a50' },
+                { note: 'A2', y: 0.40, color: '#81c784' },
+                { note: 'D2', y: 0.60, color: '#64b5f6' },
+                { note: 'G2', y: 0.80, color: '#ffd54f' }
+            ];
+            const MIN_CROSS_VEL = 0.25;  // normalized y-units/sec needed to count as a strum
+            const STRING_COOLDOWN = 140; // ms per (finger, string) to avoid double-triggers
+
+            let prevTipY = {}, crossCooldown = {}, prevTime = 0;
+            let lastHandResults = null;
+            let stringFlash = [0, 0, 0, 0]; // perf time of last pluck per string
+
+            // Stable callback, EXISTING note-detection math, kept byte-for-byte.
+            // Driven by the MediaPipe Tasks HandLandmarker module loop below
+            // (it builds the same { multiHandLandmarks, multiHandedness } shape).
+            const handleResults = results => {
+                lastHandResults = results;
+                if (!results.multiHandLandmarks) return;
+                const now = performance.now();
+                const dt = (now - prevTime) / 1000;
+                prevTime = now;
+                if (dt <= 0 || dt > 0.5) return;
+
+                for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                    const lm = results.multiHandLandmarks[h];
+                    const side = results.multiHandedness[h]?.label || 'Right';
+                    FINGERTIPS.forEach(fi => {
+                        const key = side + '_' + fi;
+                        const y = lm[fi].y;
+                        const prev = prevTipY[key];
+                        prevTipY[key] = y;
+                        if (prev === undefined) return;
+                        const vel = Math.abs(y - prev) / dt;
+                        if (vel < MIN_CROSS_VEL) return; // moving too slowly to be a strum
+
+                        for (let s = 0; s < STRINGS.length; s++) {
+                            const sy = STRINGS[s].y;
+                            // Did the fingertip cross this string line since last frame?
+                            const crossed = (prev < sy && y >= sy) || (prev > sy && y <= sy);
+                            if (!crossed) continue;
+                            const ck = key + '_' + s;
+                            if (now < (crossCooldown[ck] || 0)) continue;
+                            crossCooldown[ck] = now + STRING_COOLDOWN;
+
+                            const v = Math.min(1.0, vel / 2);
+                            playBass(STRINGS[s].note, Math.max(0.5, v), 1.0);
+                            stringFlash[s] = now;
+                            window.postMessage({
+                                type: 'notePlayed', instrument: 'bass',
+                                string: s, note: STRINGS[s].note, speed: 1.0, velocity: v
+                            }, '*');
+                            if (window.jamSessionManager && window.jamSessionManager.connected) {
+                                window.jamSessionManager.sendNote(STRINGS[s].note, v);
+                            }
+                        }
+                    });
+                }
+            };
+            // Expose so the Tasks HandLandmarker module driver can call it.
+            window.__handleResults = handleResults;
+
+            /* ── Draw camera overlay: string lines (vibrate on pluck) + hands ── */
+            function resizeCanvas() {
+                const r = canvasEl.parentElement.getBoundingClientRect();
+                canvasEl.width = r.width; canvasEl.height = r.height;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            setTimeout(resizeCanvas, 200);
+
+            function draw() {
+                requestAnimationFrame(draw);
+                const cw = canvasEl.width, ch = canvasEl.height;
+                if (!cw || !ch) return;
+                ctx.clearRect(0, 0, cw, ch);
+                const now = performance.now();
+
+                // Strings as glowing horizontal lines (vibrate briefly when plucked)
+                STRINGS.forEach((s, i) => {
+                    const yPx = s.y * ch;
+                    const since = now - stringFlash[i];
+                    const active = since < 280;
+                    const t = active ? 1 - since / 280 : 0;
+                    ctx.save();
+                    ctx.strokeStyle = s.color;
+                    ctx.shadowColor = s.color;
+                    ctx.shadowBlur = active ? 24 * t + 6 : 6;
+                    ctx.lineWidth = active ? 3 + 5 * t : 2.5;
+                    ctx.globalAlpha = active ? 1 : 0.75;
+                    ctx.beginPath();
+                    if (active) {
+                        // Vibrating string: a single arch (zero at the ends, max in the
+                        // middle) that oscillates up and down quickly, amplitude decaying.
+                        const amp = 22 * t;
+                        const osc = Math.sin(now / 11); // fast vertical vibration
+                        for (let x = 0; x <= cw; x += 6) {
+                            const env = Math.sin((x / cw) * Math.PI); // 0 at ends, 1 in middle
+                            const yy = yPx + env * amp * osc;
+                            x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+                        }
+                    } else {
+                        ctx.moveTo(0, yPx); ctx.lineTo(cw, yPx);
+                    }
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // String label
+                    ctx.fillStyle = s.color;
+                    ctx.font = 'bold 15px JetBrains Mono, monospace';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(s.note, 12, yPx - 8);
+                });
+
+                // Hands + fingertips
+                if (lastHandResults && lastHandResults.multiHandLandmarks) {
+                    lastHandResults.multiHandLandmarks.forEach(lm => {
+                        const conn = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [0, 9], [9, 10], [10, 11], [11, 12], [0, 13], [13, 14], [14, 15], [15, 16], [0, 17], [17, 18], [18, 19], [19, 20], [5, 9], [9, 13], [13, 17]];
+                        ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5;
+                        conn.forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(lm[a].x * cw, lm[a].y * ch); ctx.lineTo(lm[b].x * cw, lm[b].y * ch); ctx.stroke(); });
+                        FINGERTIPS.forEach(fi => {
+                            const px = lm[fi].x * cw, py = lm[fi].y * ch;
+                            ctx.fillStyle = '#fff'; ctx.shadowColor = '#fff'; ctx.shadowBlur = 8;
+                            ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fill();
+                            ctx.shadowBlur = 0;
+                        });
+                    });
+                }
+            }
+            requestAnimationFrame(draw);
+
+            /* ── Camera denial overlay helpers ──
+               The live camera + hand tracking is now driven by the MediaPipe
+               Tasks HandLandmarker module script below (window.__startHarmonicCamera).
+               On failure it surfaces this neo-brutal overlay; the "Enable camera"
+               button re-runs the start path as a real user gesture (re-prompts +
+               unlocks audio). */
+            const camOverlay = document.getElementById('camOverlay');
+            const camEnableBtn = document.getElementById('camEnableBtn');
+
+            function showCamOverlay() { if (camOverlay) camOverlay.hidden = false; }
+            function hideCamOverlay() { if (camOverlay) camOverlay.hidden = true; }
+
+            // Expose overlay + audio-unlock helpers for the module driver.
+            window.__showCamOverlay = showCamOverlay;
+            window.__hideCamOverlay = hideCamOverlay;
+            window.__unlockAudio = unlockAudio;
+
+            // Retry button = real user gesture: re-runs start (re-prompts) + unlocks audio.
+            if (camEnableBtn) {
+                camEnableBtn.addEventListener('click', () => {
+                    unlockAudio();               // first gesture can also turn on sound
+                    if (window.__startHarmonicCamera) window.__startHarmonicCamera();
+                });
+            }
+        })();
+
+        let lastPluckTime = 0;
+
+        // Live timer
+        setInterval(() => {
+            if (lastPluckTime > 0) {
+                const diff = ((Date.now() - lastPluckTime) / 1000).toFixed(1);
+                const el = document.getElementById('last-pluck-text');
+                const current = el.innerText;
+                const parts = current.split('→');
+                if (parts.length > 1) {
+                    el.innerText = parts[0].trim() + ' → ' + diff + 's ago';
+                }
+            }
+        }, 100);
+
+        // Listen for AR studio messages
+        window.addEventListener('message', function (e) {
+            if (e.data && e.data.type === 'notePlayed' && e.data.instrument === 'bass') {
+                const stringIdx = e.data.string;
+                const note = e.data.note;
+                const speed = e.data.speed || 1.0;
+                const vel = e.data.velocity || 0;
+
+                // Flash string pill
+                const cards = [
+                    document.getElementById('card-0'),
+                    document.getElementById('card-1'),
+                    document.getElementById('card-2'),
+                    document.getElementById('card-3')
+                ];
+                cards.forEach(c => {
+                    c.classList.remove('active');
+                    c.querySelector('.pill-status').textContent = 'IDLE';
+                });
+                if (stringIdx >= 0 && stringIdx < 4) {
+                    const card = cards[stringIdx];
+                    card.classList.add('active');
+                    card.querySelector('.pill-status').textContent = 'PLUCK';
+                    setTimeout(() => {
+                        card.classList.remove('active');
+                        card.querySelector('.pill-status').textContent = 'IDLE';
+                    }, 500);
+                }
+
+                // Pitch bar
+                const fillPos = Math.min(Math.max(((speed - 0.5) / 1.5) * 100, 0), 100);
+                document.getElementById('pitch-fill').style.width = fillPos + '%';
+
+                let pitchLabel = '1.0x';
+                if (speed < 0.8) pitchLabel = speed.toFixed(1) + 'x DEEP';
+                else if (speed > 1.3) pitchLabel = speed.toFixed(1) + 'x HIGH';
+                else pitchLabel = speed.toFixed(1) + 'x';
+                document.getElementById('live-pitch').innerText = pitchLabel;
+
+                // Last pluck
+                document.getElementById('last-pluck-text').innerText = note + ' (' + pitchLabel + ') → 0.0s ago';
+                lastPluckTime = Date.now();
+            }
+        });
+
+        // Click string pills to simulate
+        const notesArr = ["E2", "A2", "D2", "G2"];
+        for (let i = 0; i < 4; i++) {
+            document.getElementById('card-' + i).addEventListener('click', () => {
+                window.postMessage({
+                    type: "notePlayed", note: notesArr[i], instrument: "bass",
+                    string: i, speed: 1.0, velocity: 0.85
+                }, "*");
+            });
+        }
+    </script>
+
+    <!-- ============================================================
+         Modern MediaPipe Tasks HandLandmarker driver (LOCAL model).
+         Replaces the deprecated @mediapipe/hands + camera_utils CDN
+         solution. Builds the SAME { multiHandLandmarks, multiHandedness }
+         shape and feeds the page's existing note-detection callback
+         (window.__handleResults). Auto-starts on load.
+         ============================================================ -->
+    <script type="module">
+        import { HandLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18'
+
+        const video = document.getElementById('bassVideo')
+        let landmarker = null, lastVideoTime = -1, running = false
+
+        async function initLandmarker() {
+            const fileset = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm')
+            try {
+                landmarker = await HandLandmarker.createFromOptions(fileset, {
+                    baseOptions: { modelAssetPath: '/play/hand_landmarker.task', delegate: 'GPU' },
+                    runningMode: 'VIDEO', numHands: 2,
+                })
+            } catch (e) {                       // some machines lack a working GPU delegate
+                console.warn('[CV] GPU delegate failed, falling back to CPU', e)
+                landmarker = await HandLandmarker.createFromOptions(fileset, {
+                    baseOptions: { modelAssetPath: '/play/hand_landmarker.task', delegate: 'CPU' },
+                    runningMode: 'VIDEO', numHands: 2,
+                })
+            }
+        }
+
+        async function startCamera() {
+            try {
+                if (window.__unlockAudio) window.__unlockAudio()   // first-gesture audio unlock
+                if (!landmarker) await initLandmarker()
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 720 } } })
+                video.srcObject = stream
+                await video.play()
+                if (window.__hideCamOverlay) window.__hideCamOverlay()
+                running = true
+                requestAnimationFrame(loop)
+            } catch (e) {
+                console.error('[CV] camera/init failed', e)
+                if (window.__showCamOverlay) window.__showCamOverlay()
+            }
+        }
+
+        function loop() {
+            if (running && landmarker && video.readyState >= 2) {
+                const now = performance.now()
+                if (video.currentTime !== lastVideoTime) {
+                    lastVideoTime = video.currentTime
+                    let res
+                    try { res = landmarker.detectForVideo(video, now) } catch (e) { res = null }
+                    if (res) {
+                        // selfie display is CSS-mirrored (scaleX(-1)); flip x so tracking matches the view
+                        const multiHandLandmarks = (res.landmarks || []).map(h => h.map(p => ({ x: 1 - p.x, y: p.y, z: p.z })))
+                        const multiHandedness = (res.handednesses || []).map(h => ({ label: (h && h[0] && h[0].categoryName) || 'Right' }))
+                        if (window.__handleResults) window.__handleResults({ multiHandLandmarks, multiHandedness })
+                    }
+                }
+            }
+            requestAnimationFrame(loop)
+        }
+
+        window.__startHarmonicCamera = startCamera   // so the retry/auto-start can call it
+        startCamera()                                // AUTO-START on load
+    </script>
+</body>
+
+</html>

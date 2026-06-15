@@ -1,0 +1,1839 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano - Player Mode - AirJam</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <!-- ============================================================
+         NEO-BRUTALISM + OPAQUE GLASSMORPHISM restyle (Piano · amber)
+         Added AFTER styles.css to override. No tracking/audio JS or
+         element ids were changed.
+         ============================================================ -->
+    <style>
+        :root {
+            --ink: #17150f;
+            --cream: #f6f1e7;
+            --accent: #f59e0b;
+            --accent-deep: #d97706;
+            --accent-soft: #fef3c7;
+            --glass: rgba(255, 255, 255, 0.9);
+            --shadow: 6px 6px 0 var(--ink);
+            --shadow-sm: 4px 4px 0 var(--ink);
+            --shadow-xs: 3px 3px 0 var(--ink);
+            --radius: 16px;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+        body {
+            font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif !important;
+            color: var(--ink);
+            background-color: var(--cream) !important;
+            background-image:
+                radial-gradient(circle at 1px 1px, rgba(23, 21, 15, 0.07) 1.4px, transparent 0);
+            background-size: 22px 22px;
+            -webkit-font-smoothing: antialiased;
+            letter-spacing: -0.01em;
+            /* fit the whole player to the viewport: a column with the camera flexing to fill */
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 0;
+            overflow: hidden;
+        }
+
+        /* Kill the old animated background canvas, we use the cream texture */
+        .animated-bg {
+            display: none !important;
+        }
+
+        /* ───────────────────────── HEADER ───────────────────────── */
+        .mode-header {
+            flex: none;
+            width: min(1320px, calc(100% - 28px));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 9px 16px;
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 2px;
+        }
+
+        /* Back button (overrides styles.css .back-btn) */
+        .mode-header .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px !important;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            color: var(--ink) !important;
+            text-decoration: none;
+            background: #ffffff !important;
+            border: 3px solid var(--ink) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--shadow-xs);
+            backdrop-filter: none !important;
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+
+        .mode-header .back-btn:hover {
+            background: var(--accent-soft) !important;
+            transform: translate(-2px, -2px) !important;
+            box-shadow: 5px 5px 0 var(--ink) !important;
+            border-color: var(--ink) !important;
+        }
+
+        .mode-header .back-btn:active {
+            transform: translate(3px, 3px) !important;
+            box-shadow: 0px 0px 0 var(--ink) !important;
+        }
+
+        .mode-header .back-btn:focus-visible {
+            outline: 3px solid var(--ink);
+            outline-offset: 3px;
+        }
+
+        .back-arrow { font-size: 1.1rem; font-weight: 900; }
+        .mode-header .back-btn:hover .back-arrow { transform: translateX(-3px); }
+
+        .mode-title {
+            color: var(--ink) !important;
+            font-size: 1.2rem !important;
+            font-weight: 900 !important;
+            letter-spacing: -0.02em;
+            margin: 0;
+            white-space: nowrap;
+        }
+
+        /* Score readout, opaque glass pill */
+        #scoreDisplay {
+            color: var(--ink) !important;
+            font-weight: 800 !important;
+            font-size: 0.9rem !important;
+            margin: 0 !important;
+            padding: 8px 16px;
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 3px solid var(--ink);
+            border-radius: 999px;
+            box-shadow: var(--shadow-xs);
+            line-height: 1;
+        }
+        #scoreDisplay:empty { display: none; }
+
+        /* Status badge, opaque glass */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 9px 16px !important;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: var(--ink) !important;
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 3px solid var(--ink) !important;
+            border-radius: 999px !important;
+            box-shadow: var(--shadow-xs);
+            white-space: nowrap;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #22c55e !important;
+            border: 2px solid var(--ink);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.55; transform: scale(0.82); }
+        }
+
+        /* ──────────────────────── CONTROLS ──────────────────────── */
+        .song-controls {
+            flex: none;
+            width: min(1320px, calc(100% - 28px));
+            display: flex;
+            align-items: center;
+            gap: 12px !important;
+            flex-wrap: wrap;
+            padding: 10px 16px !important;
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius) !important;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .song-controls label {
+            color: var(--ink) !important;
+            font-weight: 700 !important;
+            font-size: 0.85rem !important;
+            letter-spacing: -0.01em;
+        }
+
+        .song-select,
+        #pdfSelect {
+            padding: 10px 16px !important;
+            font-family: inherit;
+            font-size: 0.95rem !important;
+            font-weight: 700;
+            border-radius: 12px !important;
+            border: 3px solid var(--ink) !important;
+            background: #ffffff !important;
+            color: var(--ink) !important;
+            box-shadow: var(--shadow-xs);
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2317150f' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 38px !important;
+        }
+
+        .song-select { min-width: 240px; }
+
+        .song-select:hover,
+        #pdfSelect:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 var(--ink);
+        }
+
+        .song-select:focus-visible,
+        #pdfSelect:focus-visible {
+            outline: 3px solid var(--accent-deep);
+            outline-offset: 2px;
+        }
+
+        /* Generic neo-brutal button shape */
+        .start-btn,
+        .upload-mp3-btn,
+        #trackPickerCancel,
+        .pdf-upload-label {
+            font-family: inherit;
+            font-weight: 800 !important;
+            letter-spacing: -0.01em;
+            border: 3px solid var(--ink) !important;
+            border-radius: 12px !important;
+            box-shadow: var(--shadow-xs);
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+
+        .start-btn:hover,
+        .upload-mp3-btn:hover,
+        #trackPickerCancel:hover,
+        .pdf-upload-label:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 5px 5px 0 var(--ink);
+        }
+
+        .start-btn:active,
+        .upload-mp3-btn:active,
+        #trackPickerCancel:active,
+        .pdf-upload-label:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+
+        .start-btn:focus-visible,
+        .upload-mp3-btn:focus-visible,
+        #trackPickerCancel:focus-visible,
+        .pdf-upload-label:focus-visible {
+            outline: 3px solid var(--accent-deep);
+            outline-offset: 2px;
+        }
+
+        .start-btn {
+            padding: 11px 24px !important;
+            font-size: 0.98rem !important;
+            background: var(--accent) !important;
+            color: var(--ink) !important;
+        }
+
+        .upload-mp3-btn {
+            padding: 10px 18px !important;
+            font-size: 0.85rem !important;
+            background: #ffffff !important;
+            color: var(--ink) !important;
+        }
+
+        .upload-status {
+            font-size: 0.8rem !important;
+            font-weight: 700;
+            color: var(--accent-deep) !important;
+        }
+
+        /* Control sub-groups (sensitivity / BPM / midi) */
+        .ctrl-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 14px;
+            background: #ffffff;
+            border: 3px solid var(--ink);
+            border-radius: 12px;
+            box-shadow: var(--shadow-xs);
+        }
+        .ctrl-group .ctrl-value {
+            font-weight: 800;
+            font-size: 0.85rem;
+            min-width: 36px;
+            text-align: right;
+            color: var(--accent-deep) !important;
+        }
+        #bpmValue { color: var(--accent-deep) !important; }
+        .ctrl-group--push { margin-left: auto; }
+
+        /* Range sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: var(--accent-soft);
+            border: 2px solid var(--ink);
+            border-radius: 999px;
+            cursor: pointer;
+            accent-color: var(--accent) !important;
+        }
+        input[type="range"]#sensitivitySlider { width: 110px; }
+        input[type="range"]#bpmSlider { width: 90px; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: 50%;
+            cursor: pointer;
+            margin-top: -1px;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="range"]:focus-visible {
+            outline: 3px solid var(--accent-deep);
+            outline-offset: 3px;
+        }
+
+        /* ───────────────────────── MAIN AREA ─────────────────────── */
+        .ar-container {
+            flex: 1;
+            min-height: 0;
+            width: min(1320px, calc(100% - 28px));
+            margin: 0 !important;
+            padding: 0 !important;
+            display: flex;
+            align-items: stretch;
+            gap: 16px !important;
+        }
+
+        /* Camera column: holds + centres the 4:3 camera frame */
+        .camera-col {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Camera frame, bold neo-brutal. Sized by JS (sizeCamera) to the largest 4:3
+           box that fits, so the 4:3 webcam fills it with no crop and the landmark
+           dots map straight onto your fingers. */
+        .camera-frame {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border: 3px solid var(--ink) !important;
+            border-radius: var(--radius) !important;
+            overflow: hidden;
+            background: #0c0a06 !important;
+            box-shadow: 6px 6px 0 var(--ink), 0 0 0 4px var(--accent) inset;
+        }
+        #playerVideo {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+            display: block;
+        }
+        #playerCanvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* PDF / sheet-music panel, opaque glass card */
+        #pdfContainer {
+            position: relative;
+            flex: 0 0 clamp(260px, 28%, 360px);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px !important;
+            border: 3px solid var(--ink) !important;
+            border-radius: var(--radius) !important;
+            overflow: hidden;
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pdf-head {
+            display: flex; flex-direction: column;
+            gap: 10px; width: 100%;
+            margin-bottom: 12px;
+        }
+        .pdf-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .pdf-title {
+            color: var(--ink) !important;
+            font-weight: 900 !important;
+            font-size: 1.05rem !important;
+            letter-spacing: -0.02em;
+        }
+        .pdf-upload-label {
+            padding: 7px 14px !important;
+            font-size: 0.78rem !important;
+            background: var(--accent) !important;
+            color: var(--ink) !important;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        #pdfPlaceholder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            text-align: center;
+            color: rgba(23, 21, 15, 0.6) !important;
+            font-weight: 600;
+            border: 3px dashed rgba(23, 21, 15, 0.28);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.55);
+        }
+        #pdfPlaceholder p { margin: 0; line-height: 1.5; }
+
+        #pdfViewer {
+            width: 100%;
+            flex: 1;
+            border: 3px solid var(--ink) !important;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: var(--shadow-xs);
+        }
+
+        /* ─────────────────────── TRACK MODAL ─────────────────────── */
+        #trackPickerOverlay {
+            background: rgba(23, 21, 15, 0.55) !important;
+            -webkit-backdrop-filter: blur(4px);
+            backdrop-filter: blur(4px);
+        }
+        .track-modal {
+            background: var(--glass) !important;
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            border: 3px solid var(--ink) !important;
+            border-radius: var(--radius) !important;
+            box-shadow: var(--shadow) !important;
+            padding: 24px !important;
+        }
+        .track-modal h3 {
+            color: var(--ink) !important;
+            font-weight: 900 !important;
+            letter-spacing: -0.02em;
+            margin: 0 0 16px !important;
+        }
+        #trackPickerCancel {
+            padding: 9px 20px !important;
+            background: #ffffff !important;
+            color: var(--ink) !important;
+        }
+
+        /* ───────────────────────── RESPONSIVE ────────────────────── */
+        @media (max-width: 1024px) {
+            #pdfContainer { flex-basis: clamp(220px, 30%, 320px); }
+        }
+
+        /* Narrow / portrait: stack camera over sheet and let the page scroll */
+        @media (max-width: 860px) {
+            body { height: auto; min-height: 100dvh; overflow: auto; }
+            .ar-container { flex-direction: column; min-height: 0; }
+            .camera-col { width: 100%; height: auto; }
+            .camera-frame { width: 100% !important; height: auto !important; aspect-ratio: 4 / 3; }
+            #pdfContainer { flex: none; width: 100%; height: 60vh; }
+            .ctrl-group--push { margin-left: 0; }
+        }
+
+        @media (max-width: 560px) {
+            .mode-title { font-size: 1.05rem !important; white-space: normal; }
+            .song-select { min-width: 0; width: 100%; flex: 1 1 100%; }
+            .start-btn { flex: 1 1 100%; }
+            .camera-frame { box-shadow: 5px 5px 0 var(--ink), 0 0 0 3px var(--accent) inset; }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+            .status-dot { animation: none; }
+        }
+
+        /* ───────────── CAMERA-DENIED / RETRY OVERLAY ───────────── */
+        /* On-brand neo-brutal panel shown over the camera frame when the
+           webcam is blocked or unavailable. Hidden by default. */
+        #camOverlay {
+            position: absolute;
+            inset: 0;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            text-align: center;
+            padding: 26px;
+            background: rgba(23, 21, 15, 0.86);
+            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+        }
+        #camOverlay.is-visible { display: flex; }
+
+        .cam-overlay-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            max-width: 380px;
+            width: 100%;
+            padding: 26px 24px;
+            background: var(--glass);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border: 3px solid var(--ink);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .cam-overlay-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: 14px;
+            box-shadow: var(--shadow-xs);
+        }
+        .cam-overlay-icon svg { width: 30px; height: 30px; display: block; }
+        .cam-overlay-title {
+            margin: 2px 0 0;
+            color: var(--ink);
+            font-size: 1.18rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            line-height: 1.2;
+        }
+        .cam-overlay-help {
+            margin: 0;
+            color: rgba(23, 21, 15, 0.72);
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.45;
+        }
+        #camRetryBtn {
+            margin-top: 4px;
+            padding: 12px 26px;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 1rem;
+            letter-spacing: -0.01em;
+            color: var(--ink);
+            background: var(--accent);
+            border: 3px solid var(--ink);
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+        #camRetryBtn:hover {
+            background: var(--accent-soft);
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0 var(--ink);
+        }
+        #camRetryBtn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 0 0 0 var(--ink);
+        }
+        #camRetryBtn:focus-visible {
+            outline: 3px solid var(--accent-deep);
+            outline-offset: 3px;
+        }
+        #camRetryBtn[disabled] {
+            opacity: 0.7;
+            cursor: progress;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Header -->
+    <div class="mode-header">
+        <a href="/?studio=1" class="back-btn">
+            <span class="back-arrow">←</span>
+            <span>Back to Studio</span>
+        </a>
+        <div class="mode-title" id="modeTitle">Piano · Player Mode</div>
+        <div id="scoreDisplay"></div>
+        <div class="status-badge">
+            <div class="status-dot"></div>
+            <span>AR Active</span>
+        </div>
+    </div>
+
+    <!-- Song Controls -->
+    <div class="song-controls">
+        <select id="songSelect" class="song-select">
+            <option value="">-- Select a Song --</option>
+            <option value="twinkle">Twinkle Twinkle Little Star</option>
+            <option value="mary">Mary Had a Little Lamb</option>
+            <option value="hot_cross_buns">Hot Cross Buns</option>
+            <option value="row_row_row">Row Row Row Your Boat</option>
+            <option value="happy_birthday">Happy Birthday</option>
+            <option value="believer_intro">Believer (Intro)</option>
+            <option value="shape_of_you">Shape of You</option>
+        </select>
+        <button id="startBtn" class="start-btn">▶ Start Song</button>
+        <div class="ctrl-group">
+            <label for="sensitivitySlider">Sensitivity</label>
+            <input type="range" id="sensitivitySlider" min="0.1" max="1.0" step="0.05" value="0.5">
+            <span id="sensitivityValue" class="ctrl-value">0.50</span>
+        </div>
+        <div class="ctrl-group">
+            <label for="bpmSlider">BPM</label>
+            <input type="range" id="bpmSlider" min="60" max="180" step="10" value="100">
+            <span id="bpmValue" class="ctrl-value">100</span>
+        </div>
+        <div class="ctrl-group ctrl-group--push">
+            <button id="midiUploadBtn" class="upload-mp3-btn">Upload MIDI</button>
+            <input type="file" id="midiFileInput" accept=".mid,.midi" style="display:none;">
+            <span id="midiStatus" class="upload-status" style="max-width:200px;"></span>
+        </div>
+    </div>
+
+    <!-- Track picker modal (hidden by default) -->
+    <div id="trackPickerOverlay"
+        style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;">
+        <div class="track-modal" style="max-width:520px;width:90%;max-height:70vh;overflow-y:auto;">
+            <h3>Select Track to Practice</h3>
+            <div id="trackList" style="display:flex;flex-direction:column;gap:8px;"></div>
+            <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+                <button id="trackPickerCancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container Content (Camera + PDF) -->
+    <div class="ar-container">
+        <!-- Camera column centres + sizes the 4:3 camera frame to fit the viewport -->
+        <div class="camera-col">
+        <!-- Camera Container (must stay the direct parent of #playerCanvas for sizing) -->
+        <div class="camera-frame">
+            <video id="playerVideo" autoplay playsinline></video>
+            <canvas id="playerCanvas"></canvas>
+            <!-- Camera-denied / unavailable retry overlay (hidden until a start failure) -->
+            <div id="camOverlay" role="alertdialog" aria-modal="true" aria-labelledby="camOverlayTitle">
+                <div class="cam-overlay-card">
+                    <span class="cam-overlay-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#17150f" stroke-width="2.4"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 7l-7 5 7 5V7z" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                        </svg>
+                    </span>
+                    <h2 class="cam-overlay-title" id="camOverlayTitle">Turn on your camera to play Piano</h2>
+                    <p class="cam-overlay-help" id="camOverlayHelp">We need your webcam to track your hands. Allow camera
+                        access, then tap below to start.</p>
+                    <button id="camRetryBtn" type="button">Enable camera</button>
+                </div>
+            </div>
+        </div>
+        </div>
+
+        <!-- PDF Viewer Container -->
+        <div id="pdfContainer">
+            <div class="pdf-head">
+                <div class="pdf-head-row">
+                    <span class="pdf-title">Sheet Music</span>
+                    <label for="pdfUploadInput" class="pdf-upload-label">Upload PDF</label>
+                    <input type="file" id="pdfUploadInput" accept=".pdf" style="display:none;">
+                </div>
+                <select id="pdfSelect">
+                    <option value="">-- Select Sheet Music --</option>
+                    <option value="pdfs/Twinkle Twinkle Little Star Level 1 easy.pdf">Twinkle Twinkle Little Star
+                    </option>
+                    <option value="pdfs/Hot Cross Buns.pdf">Hot Cross Buns</option>
+                    <option value="pdfs/mary had a little lamb with letters.pdf">Mary Had a Little Lamb</option>
+                </select>
+            </div>
+
+            <div id="pdfPlaceholder">
+                <p>Select sheet music above<br />or upload your own PDF.</p>
+            </div>
+            <iframe id="pdfViewer" style="display:none;" title="PDF Viewer"></iframe>
+        </div>
+    </div>
+
+    <script src="jam-core.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const getApiUrl = () => {
+                const host = window.location.hostname || 'localhost';
+                const isNgrok = host.includes('ngrok-free.app') || host.includes('ngrok-free.dev') || host.includes('ngrok.io');
+                if (isNgrok) {
+                    let base = window.location.origin.replace(/:\d+$/, '') + ':8766';
+                    if (window.location.port === '' || window.location.port === '443') {
+                        base = window.location.origin;
+                    }
+                    return base;
+                }
+                return 'http://' + host + ':8766';
+            };
+            const API = getApiUrl();
+
+            // 'player' (default) = must select a song and press Start before any note plays.
+            // 'composer' = free play immediately, no song required.
+            const MODE = (new URLSearchParams(window.location.search).get('mode') === 'composer')
+                ? 'composer' : 'player';
+
+            const songSelect = document.getElementById('songSelect');
+            const startBtn = document.getElementById('startBtn');
+            const sensitivitySlider = document.getElementById('sensitivitySlider');
+            const sensitivityValue = document.getElementById('sensitivityValue');
+            const bpmSlider = document.getElementById('bpmSlider');
+            const bpmValue = document.getElementById('bpmValue');
+            const videoEl = document.getElementById('playerVideo');
+            const canvasEl = document.getElementById('playerCanvas');
+            const ctx = canvasEl.getContext('2d');
+            const midiUploadBtn = document.getElementById('midiUploadBtn');
+            const midiFileInput = document.getElementById('midiFileInput');
+            const midiStatus = document.getElementById('midiStatus');
+            const trackPickerOverlay = document.getElementById('trackPickerOverlay');
+            const trackList = document.getElementById('trackList');
+            const trackPickerCancel = document.getElementById('trackPickerCancel');
+            const pdfUploadInput = document.getElementById('pdfUploadInput');
+            const pdfViewer = document.getElementById('pdfViewer');
+            const pdfPlaceholder = document.getElementById('pdfPlaceholder');
+            const pdfSelect = document.getElementById('pdfSelect');
+
+            // Composer mode: free play, so hide all the song-practice controls and
+            // relabel the header. Camera, sensitivity and the PDF viewer stay.
+            if (MODE === 'composer') {
+                document.title = 'Piano - Composer Mode';
+                const modeTitle = document.getElementById('modeTitle');
+                if (modeTitle) modeTitle.textContent = '🎹 Piano - Composer Mode';
+                [songSelect, startBtn, midiUploadBtn, midiFileInput, midiStatus].forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
+                // Hide the BPM control group (its label/slider/value live in one wrapper)
+                if (bpmSlider && bpmSlider.parentElement) {
+                    bpmSlider.parentElement.style.display = 'none';
+                }
+            }
+
+            // Helper to show a PDF in the viewer
+            function showPdf(url) {
+                pdfViewer.src = url;
+                pdfViewer.style.display = 'block';
+                pdfPlaceholder.style.display = 'none';
+            }
+
+            // Dropdown selection handler
+            pdfSelect.addEventListener('change', () => {
+                const val = pdfSelect.value;
+                if (val) {
+                    showPdf(val);
+                }
+            });
+
+            // Handling local PDF uploads
+            pdfUploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    const objectUrl = URL.createObjectURL(file);
+                    showPdf(objectUrl);
+                    pdfSelect.value = ''; // Reset dropdown since custom file is loaded
+                }
+            });
+
+            sensitivitySlider.addEventListener('input', () => {
+                sensitivityValue.textContent = parseFloat(sensitivitySlider.value).toFixed(2);
+            });
+            bpmSlider.addEventListener('input', () => {
+                bpmValue.textContent = bpmSlider.value;
+            });
+
+            /* ── Audio ── */
+            const PIANO_NOTES = [];
+            for (let oct = 3; oct <= 6; oct++) {
+                ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].forEach(n => {
+                    PIANO_NOTES.push(n + oct);
+                });
+            }
+            const NOTE_FREQ = {};
+            PIANO_NOTES.forEach(n => {
+                const m = n.match(/^([A-G]#?)(\d+)$/);
+                if (!m) return;
+                const semi = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
+                const midi = (parseInt(m[2]) + 1) * 12 + (semi[m[1]] || 0);
+                NOTE_FREQ[n] = 440 * Math.pow(2, (midi - 69) / 12);
+            });
+
+            // Drum sounds for Jam Session
+            const DRUM_FILES = {
+                'kick': 'drum_sounds/kick-01.wav',
+                'hihat': 'drum_sounds/hihat-open.wav',
+                'tom1': 'drum_sounds/tom-01.wav',
+                'tom': 'drum_sounds/tom-01.wav',
+                'snare': 'drum_sounds/snare-03.wav'
+            };
+            const drumBuffers = {};
+            let drumsLoaded = false;
+
+            async function loadDrums() {
+                if (!audioCtx) initAudio();
+                if (drumsLoaded) return;
+                for (const [id, url] of Object.entries(DRUM_FILES)) {
+                    try {
+                        const r = await fetch(url);
+                        const a = await r.arrayBuffer();
+                        drumBuffers[id] = await audioCtx.decodeAudioData(a);
+                    } catch (e) { console.error('Failed to load drum:', id, e); }
+                }
+                drumsLoaded = true;
+            }
+
+            function playDrum(id) {
+                const buf = drumBuffers[id.toLowerCase()];
+                if (!buf || !audioCtx) return;
+                const s = audioCtx.createBufferSource();
+                s.buffer = buf;
+                s.connect(masterGain);
+                s.start();
+            }
+
+            let audioCtx = null, masterGain = null;
+            let pianoSamplesLoaded = false;
+            const pianoBuffers = {};
+
+            const PIANO_FILES = {
+                'C': 'sounds/c1.wav', 'C#': 'sounds/c1s.wav', 'D': 'sounds/d1.wav', 'D#': 'sounds/d1s.wav',
+                'E': 'sounds/e1.wav', 'F': 'sounds/f1.wav', 'F#': 'sounds/f1s.wav', 'G': 'sounds/g1.wav',
+                'G#': 'sounds/g1s.wav', 'A': 'sounds/a1.wav', 'A#': 'sounds/a1s.wav', 'B': 'sounds/b1.wav'
+            };
+
+            async function loadPianoSamples() {
+                if (!audioCtx) await initAudio();
+                if (pianoSamplesLoaded) return;
+                console.log('[DEBUG] Loading piano samples...');
+                const results = await Promise.all(Object.entries(PIANO_FILES).map(async ([note, url]) => {
+                    try {
+                        const r = await fetch(url);
+                        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                        const a = await r.arrayBuffer();
+                        pianoBuffers[note] = await audioCtx.decodeAudioData(a);
+                        console.log(`[DEBUG] Loaded sample for ${note}`);
+                        return true;
+                    } catch (e) {
+                        console.error('Failed to load piano sample:', note, e);
+                        return false;
+                    }
+                }));
+                pianoSamplesLoaded = true;
+                console.log('[DEBUG] All piano samples loading process finished.');
+            }
+
+            async function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    masterGain = audioCtx.createGain();
+                    masterGain.gain.value = 0.8;
+                    masterGain.connect(audioCtx.destination);
+
+                    // Eagerly preload sounds so the first strike isn't silent.
+                    // Safe to call here: audioCtx is already assigned above, so
+                    // loadPianoSamples()'s own initAudio() guard won't recurse.
+                    loadDrums();
+                    loadPianoSamples();
+                }
+
+                // Chrome Autoplay Policy: if context is suspended, resume it on user gesture
+                if (audioCtx.state === 'suspended') {
+                    console.log('[DEBUG] Resuming suspended AudioContext');
+                    await audioCtx.resume();
+                }
+            }
+
+            // Jam Session Initialization
+            const params = new URLSearchParams(window.location.search);
+            const jamRoom = params.get('jamRoom');
+            if (jamRoom) {
+                // Eagerly load ALL samples so remote notes play immediately
+                initAudio().then(() => {
+                    loadPianoSamples(); // Load piano samples for receiving remote piano notes
+                    loadDrums();        // Load drum samples for receiving remote drum notes
+                });
+
+                window.jamSessionManager = new JamSessionManager();
+                window.jamSessionManager.connect(jamRoom, 'piano_' + Math.random().toString(36).slice(2, 8), 'piano');
+                window.jamSessionManager.onRemoteNote = async (p) => {
+                    await initAudio();
+                    console.log('[Jam] Remote note:', p);
+                    if (p.instrument === 'drums') {
+                        playDrum(p.note);
+                    } else {
+                        await playNote(p.note, p.velocity || 0.8, 1.0);
+                    }
+
+                    // Simple visual fallback for remote note
+                    const ctx2 = canvasEl.getContext('2d');
+                    ctx2.fillStyle = 'rgba(0, 255, 136, 0.5)';
+                    ctx2.fillRect(0, 0, canvasEl.width, 10);
+                    setTimeout(() => ctx2.clearRect(0, 0, canvasEl.width, 10), 100);
+                };
+
+                // Add badge
+                const hdr = document.querySelector('.mode-header');
+                if (hdr) {
+                    const badge = document.createElement('div');
+                    badge.className = 'status-badge';
+                    badge.innerHTML = `<div class="status-dot"></div><span>Jam: ${jamRoom}</span>`;
+                    hdr.appendChild(badge);
+                }
+            }
+
+            // `speed` multiplier controls free-play continuous pitching
+            async function playNote(note, vel, speed = 1.0) {
+                await initAudio();
+                // Ensure piano samples are loaded (free-play strikes happen before any song starts)
+                if (!pianoSamplesLoaded) await loadPianoSamples();
+
+                // Parse the requested note (e.g. "C#4")
+                const match = note.match(/^([A-G]#?)(\d+)$/i);
+                if (!match) {
+                    console.warn(`[DEBUG] Could not parse note: ${note}`);
+                    return;
+                }
+
+                const baseNote = match[1].toUpperCase();
+                const octave = parseInt(match[2]);
+
+                const buf = pianoBuffers[baseNote];
+                if (!buf) {
+                    console.warn(`[DEBUG] Buffer for ${baseNote} not loaded yet (note requested: ${note})`);
+                    return;
+                }
+
+                // Assume the base samples in sounds/ are Octave 4
+                // Calculate the pitch shift needed for the target octave
+                const targetOctave = isNaN(octave) ? 4 : octave;
+                const octaveShift = targetOctave - 4;
+                const pitchRatio = Math.pow(2, octaveShift) * speed;
+
+                // Make sure context is actually running (some browsers re-suspend)
+                if (audioCtx.state !== 'running') {
+                    try { await audioCtx.resume(); } catch (e) { /* ignore */ }
+                }
+
+                const t = audioCtx.currentTime;
+                const source = audioCtx.createBufferSource();
+                source.buffer = buf;
+
+                // Apply pitch shifting
+                source.playbackRate.value = pitchRatio;
+
+                // Click-free pluck envelope. Exponential ramps must stay > 0.
+                const peak = Math.max(0.08, Math.min(vel, 1)) * 0.9;
+                const g = audioCtx.createGain();
+                try {
+                    g.gain.setValueAtTime(0.0001, t);
+                    g.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+                } catch (e) {
+                    g.gain.value = peak; // fallback if ramp scheduling fails
+                }
+
+                source.connect(g);
+                g.connect(masterGain);
+                try {
+                    source.start(t);
+                    console.log(`[playNote] STARTED ${note} pitch=${pitchRatio.toFixed(2)} peak=${peak.toFixed(2)} master=${masterGain.gain.value} ctx=${audioCtx.state}`);
+                } catch (e) {
+                    console.error('[playNote] source.start failed', e);
+                }
+            }
+
+            /* ── Song State ── */
+            let songNotes = [];
+            let songPlaying = false;
+            let songStartTime = 0;
+            let currentNoteIdx = 0;
+            let score = { hit: 0, miss: 0, total: 0 };
+            let hitFlashes = [];  // { x, y, t, note }
+
+            // Fingertip landmark indices
+            const FINGERTIPS = [4, 8, 12, 16, 20];
+            const FINGER_NAMES = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
+            let lastHandResults = null;
+
+            // Note-to-finger mapping (matches ar_studio.py)
+            // Maps note letter -> { hand: 'Left'|'Right', finger: 'Thumb'|'Index'|... }
+            const NOTE_TO_FINGER = {
+                'C': { hand: 'Left', finger: 'Pinky', tipIdx: 20 },
+                'D': { hand: 'Left', finger: 'Ring', tipIdx: 16 },
+                'E': { hand: 'Left', finger: 'Middle', tipIdx: 12 },
+                'F': { hand: 'Left', finger: 'Index', tipIdx: 8 },
+                'G': { hand: 'Left', finger: 'Thumb', tipIdx: 4 },
+                'A': { hand: 'Right', finger: 'Thumb', tipIdx: 4 },
+                'B': { hand: 'Right', finger: 'Index', tipIdx: 8 },
+            };
+
+            // Reverse mapping for struck checks. Full two-hand layout:
+            //   Left  hand (pinky -> thumb): C D E F G   (octave 4)
+            //   Right hand (thumb -> pinky): A B C D E   (A,B octave 4; C,D,E octave 5)
+            // Values include octave so the right hand continues the scale upward.
+            const FINGER_TO_NOTE = {
+                'Left_20': 'C4',
+                'Left_16': 'D4',
+                'Left_12': 'E4',
+                'Left_8': 'F4',
+                'Left_4': 'G4',
+                'Right_4': 'A4',
+                'Right_8': 'B4',
+                'Right_12': 'C5',
+                'Right_16': 'D5',
+                'Right_20': 'E5'
+            };
+
+            // Per-finger detection easing. Ring and pinky (and the right hand in general)
+            // flex less and are tracked more noisily, so they need lower velocity/distance
+            // thresholds to register consistently. <1 = easier to trigger.
+            const FINGER_EASE = {
+                'Left_4': 1.0, 'Left_8': 1.0, 'Left_12': 0.95, 'Left_16': 0.8, 'Left_20': 0.7,
+                'Right_4': 1.0, 'Right_8': 0.95, 'Right_12': 0.75, 'Right_16': 0.6, 'Right_20': 0.5
+            };
+
+            // Octave zone labels (using Dotted styles and Speed text)
+            const OCTAVE_ZONES = [
+                { label: 'TOP (2x SPEED / HIGHER PITCH)', color: 'rgba(255, 0, 255, 0.05)', border: 'rgba(255, 0, 255, 0.3)' },
+                { label: 'MIDDLE (1x SPEED / NORMAL PITCH)', color: 'rgba(0, 255, 136, 0.05)', border: 'rgba(0, 255, 136, 0.3)' },
+                { label: 'BOTTOM (0.5x SPEED / LOWER PITCH)', color: 'rgba(255, 170, 0, 0.05)', border: 'rgba(255, 170, 0, 0.3)' },
+            ];
+
+            function noteToZoneIndex(noteStr) {
+                const idx = PIANO_NOTES.indexOf(noteStr);
+                if (idx >= 0) return idx;
+                const m = noteStr.match(/^([A-G]#?)(\d+)$/i);
+                if (!m) return -1;
+                const target = m[1] + m[2];
+                for (let i = 0; i < PIANO_NOTES.length; i++) {
+                    if (PIANO_NOTES[i] === target) return i;
+                }
+                const semi = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 };
+                const midiNum = (parseInt(m[2]) + 1) * 12 + (semi[m[1]] || 0);
+                const firstMidi = 48; // C3
+                return Math.max(0, Math.min(PIANO_NOTES.length - 1, midiNum - firstMidi));
+            }
+
+            async function startSong() {
+                if (!songNotes.length) return;
+                await initAudio(); // unlock AudioContext first
+                await loadPianoSamples(); // then ensure samples are ready
+                songPlaying = true;
+                songStartTime = performance.now();
+                currentNoteIdx = 0;
+                score = { hit: 0, miss: 0, total: 0 };
+                updateScoreDisplay();
+                hitFlashes = [];
+                startBtn.textContent = '⏹ Stop';
+            }
+
+            function updateScoreDisplay() {
+                const el = document.getElementById('scoreDisplay');
+                if (!el) return;
+                if (!songPlaying && score.hit === 0) { el.textContent = ''; return; }
+                el.textContent = `Notes: ${score.hit}/${songNotes.length}`;
+            }
+
+            function stopSong() {
+                songPlaying = false;
+                currentNoteIdx = 0;
+                hitFlashes = [];
+                startBtn.textContent = '▶ Start Song';
+            }
+
+            /* ── Canvas sizing ── */
+            // Size the camera frame to the largest 4:3 box that fits its column, then
+            // match the canvas buffer to it. 4:3 matches the 960x720 webcam, so the
+            // video fills with no crop and the hand-landmark dots map onto the fingers.
+            const cameraFrame = canvasEl.parentElement; // .camera-frame
+            function sizeCamera() {
+                const col = cameraFrame.parentElement; // .camera-col
+                const availW = col.clientWidth;
+                const availH = col.clientHeight;
+                if (availW && availH) {
+                    const ar = 4 / 3;
+                    let w = availW, h = w / ar;
+                    if (h > availH) { h = availH; w = h * ar; }
+                    cameraFrame.style.width = w + 'px';
+                    cameraFrame.style.height = h + 'px';
+                }
+                // match the canvas buffer to however the frame actually rendered
+                const r = cameraFrame.getBoundingClientRect();
+                canvasEl.width = Math.max(1, Math.round(r.width));
+                canvasEl.height = Math.max(1, Math.round(r.height));
+            }
+            window.addEventListener('resize', sizeCamera);
+            if (videoEl) videoEl.addEventListener('loadedmetadata', sizeCamera);
+            sizeCamera();
+            setTimeout(sizeCamera, 200);
+            setTimeout(sizeCamera, 800);
+
+            /* ── Draw hand landmarks + green fingertip highlights + octave zones ── */
+            function drawFrame() {
+                requestAnimationFrame(drawFrame);
+                const cw = canvasEl.width, ch = canvasEl.height;
+                if (!cw || !ch) return;
+                ctx.clearRect(0, 0, cw, ch);
+
+                // ========== SPEEDS / OCTAVE ZONES (3 dotted bands) ==========
+                const zoneH = ch / 3;
+                for (let z = 0; z < 3; z++) {
+                    const oz = OCTAVE_ZONES[z];
+                    ctx.fillStyle = oz.color;
+                    ctx.fillRect(0, z * zoneH, cw, zoneH);
+
+                    // Dotted divider line
+                    if (z < 2) {
+                        ctx.strokeStyle = oz.border;
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([5, 10]); // Make it dotted
+                        ctx.beginPath();
+                        ctx.moveTo(0, (z + 1) * zoneH);
+                        ctx.lineTo(cw, (z + 1) * zoneH);
+                        ctx.stroke();
+                        ctx.setLineDash([]); // Reset
+                    }
+
+                    // Zone label
+                    ctx.fillStyle = oz.border;
+                    ctx.font = 'bold 12px JetBrains Mono, monospace';
+                    ctx.textAlign = 'left';
+                    ctx.fillText(oz.label, 8, z * zoneH + 20);
+                }
+
+                // Current target note (what to play next)
+                let targetNote = null;
+                let targetNoteLetter = null;
+                let targetFingerInfo = null;
+                if (songPlaying && currentNoteIdx < songNotes.length) {
+                    const elapsed = (performance.now() - songStartTime) / 1000;
+                    // Wait for the user to hit the note, don't auto-advance or count as miss.
+                    if (currentNoteIdx < songNotes.length) {
+                        const sn = songNotes[currentNoteIdx];
+                        if (sn) {
+                            targetNote = sn.note;
+                            // Strip numbers and convert sharps/flats (e.g. F# -> F) to closest playable finger 
+                            targetNoteLetter = sn.note.replace(/[\d]/g, '').toUpperCase();
+                            if (targetNoteLetter.includes('#') || targetNoteLetter.includes('B')) {
+                                targetNoteLetter = targetNoteLetter[0]; // Naive fallback: F# plays as F
+                            }
+                            targetFingerInfo = NOTE_TO_FINGER[targetNoteLetter] || null;
+                        }
+                    }
+                }
+
+                // ========== EXPECTED NOTE & FINGER INFO DISPLAY ==========
+                if (targetNote && targetFingerInfo) {
+                    const pulse = 0.5 + 0.3 * Math.sin(performance.now() / 150);
+                    // Show expected note + finger at top center
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    const infoW = 300, infoH = 50;
+                    ctx.fillRect(cw / 2 - infoW / 2, 4, infoW, infoH);
+                    ctx.strokeStyle = 'rgba(0,255,136,' + (pulse * 0.8) + ')';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(cw / 2 - infoW / 2, 4, infoW, infoH);
+
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 20px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Play: ' + targetNote, cw / 2, 30);
+
+                    ctx.fillStyle = 'rgba(0,255,136,0.7)';
+                    ctx.font = '13px Inter, sans-serif';
+                    ctx.fillText(targetFingerInfo.hand + ' ' + targetFingerInfo.finger, cw / 2, 48);
+                }
+
+                // Draw hand landmarks
+                if (lastHandResults && lastHandResults.multiHandLandmarks) {
+                    for (let h = 0; h < lastHandResults.multiHandLandmarks.length; h++) {
+                        const lm = lastHandResults.multiHandLandmarks[h];
+                        // SelfieMode automatically maps label to Physical Hand
+                        const mpLabel = results_cache_handedness[h] || 'Right';
+                        const userHand = mpLabel;
+
+                        // Draw connections (skeleton)
+                        const connections = [
+                            [0, 1], [1, 2], [2, 3], [3, 4],
+                            [0, 5], [5, 6], [6, 7], [7, 8],
+                            [0, 9], [9, 10], [10, 11], [11, 12],
+                            [0, 13], [13, 14], [14, 15], [15, 16],
+                            [0, 17], [17, 18], [18, 19], [19, 20],
+                            [5, 9], [9, 13], [13, 17]
+                        ];
+                        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+                        ctx.lineWidth = 1.5;
+                        connections.forEach(([a, b]) => {
+                            const ax = lm[a].x * cw, ay = lm[a].y * ch;
+                            const bx = lm[b].x * cw, by = lm[b].y * ch;
+                            ctx.beginPath();
+                            ctx.moveTo(ax, ay);
+                            ctx.lineTo(bx, by);
+                            ctx.stroke();
+                        });
+
+                        // Draw all landmarks as small dots
+                        for (let i = 0; i < lm.length; i++) {
+                            const px = lm[i].x * cw;
+                            const py = lm[i].y * ch;
+                            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                            ctx.beginPath();
+                            ctx.arc(px, py, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                        // Draw fingertips, highlight the EXPECTED finger
+                        FINGERTIPS.forEach((fi, idx) => {
+                            const px = lm[fi].x * cw;
+                            const py = lm[fi].y * ch;
+
+                            // Check if this finger is the expected one for the target note
+                            const isExpectedFinger = targetFingerInfo &&
+                                targetFingerInfo.hand === userHand &&
+                                targetFingerInfo.tipIdx === fi;
+
+                            if (isExpectedFinger) {
+                                // BIG GLOWING TARGET on the expected finger (matches ar_studio.py visuals)
+                                const glowPulse = 0.7 + 0.3 * Math.sin(performance.now() / 100);
+                                // Multiple outer rings for glow
+                                ctx.shadowColor = '#00ff88';
+                                ctx.shadowBlur = 15 * glowPulse;
+                                ctx.strokeStyle = 'rgba(0, 200, 0, 0.5)';
+                                ctx.lineWidth = 1;
+                                ctx.beginPath(); ctx.arc(px, py, 25, 0, Math.PI * 2); ctx.stroke();
+                                ctx.strokeStyle = 'rgba(0, 255, 0, 0.7)';
+                                ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.arc(px, py, 20, 0, Math.PI * 2); ctx.stroke();
+                                ctx.strokeStyle = '#00ff88';
+                                ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.arc(px, py, 15, 0, Math.PI * 2); ctx.stroke();
+                                // Filled core
+                                ctx.fillStyle = 'rgba(0, 255, 136, ' + (0.9 * glowPulse) + ')';
+                                ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2); ctx.fill();
+                                // White border on core
+                                ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+                                ctx.lineWidth = 1;
+                                ctx.beginPath(); ctx.arc(px, py, 10, 0, Math.PI * 2); ctx.stroke();
+                                ctx.shadowBlur = 0;
+
+                                // Finger + note label
+                                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                                ctx.fillRect(px - 40, py - 75, 80, 22);
+                                ctx.fillStyle = '#00ff88';
+                                ctx.font = 'bold 14px Inter, sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(targetNote + ', ' + FINGER_NAMES[idx], px, py - 58);
+                            } else {
+                                // Normal fingertip (white dot, small)
+                                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                                ctx.beginPath();
+                                ctx.arc(px, py, 6, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        });
+                    }
+                }
+
+                // Draw hit flashes
+                const now = performance.now();
+                hitFlashes = hitFlashes.filter(f => {
+                    const age = now - f.t;
+                    if (age > 600) return false;
+                    const alpha = 1 - age / 600;
+                    const radius = 30 + age * 0.15;
+                    ctx.globalAlpha = alpha;
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#00ff88';
+                    ctx.shadowBlur = 20;
+                    ctx.beginPath();
+                    ctx.arc(f.x, f.y, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#00ff88';
+                    ctx.font = 'bold 14px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(f.note, f.x, f.y - radius - 8);
+                    ctx.globalAlpha = 1;
+                    return true;
+                });
+
+                // Player-mode hint: nothing plays until a song is started.
+                if (MODE === 'player' && !songPlaying) {
+                    const msg = 'Select a song and press ▶ Start Song to play';
+                    ctx.save();
+                    ctx.font = 'bold 18px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    const tw = ctx.measureText(msg).width;
+                    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                    ctx.fillRect(cw / 2 - tw / 2 - 16, ch - 56, tw + 32, 36);
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillText(msg, cw / 2, ch - 32);
+                    ctx.restore();
+                }
+
+                // Score display
+                // Song ended
+                if (songPlaying && currentNoteIdx >= songNotes.length) {
+                    stopSong();
+                }
+            }
+            requestAnimationFrame(drawFrame);
+
+            /* ── Hand Tracking ──
+               Strike detection uses fingertip motion RELATIVE TO THE HAND (the finger's
+               knuckle / MCP joint). Moving the whole hand toward/away from the camera, or
+               up and down, moves the tip and knuckle together, so the relative position
+               barely changes and no note fires. A real key-press curls the fingertip down
+               relative to the knuckle. We also require a minimum travel distance, re-arm
+               only after the finger lifts, and ignore frames where many fingers move at
+               once (that's whole-hand motion, not a deliberate press). */
+            const TIP_TO_MCP = { 4: 2, 8: 5, 12: 9, 16: 13, 20: 17 };
+            const MIN_STRIKE_DISTANCE = 0.035; // min downward travel relative to hand (normalized)
+            const REARM_VELOCITY = 0.04;       // upward relative speed needed to re-arm a finger
+            const MAX_SIMULTANEOUS_FINGERS = 2; // more than this in one frame = whole-hand motion
+
+            let prevRelY = {};   // last relative (tip - knuckle) y, per finger
+            let armed = {};      // finger is lifted and ready to strike
+            let armRelY = {};    // relative y captured at the top of the lift (distance baseline)
+            let cooldowns = {}, prevTime = 0;
+            let results_cache_handedness = []; // cache handedness labels for draw
+
+            // Stable reference to the existing onResults-style callback. The math/note
+            // logic below is UNCHANGED, it is now driven by the Tasks HandLandmarker
+            // loop (see the <script type="module"> at the end of <body>) which builds the
+            // SAME { multiHandLandmarks, multiHandedness } shape and calls this function.
+            const handleResults = (results) => {
+                lastHandResults = results;
+                // Native SelfieMode handles physical hand labeling correctly
+                results_cache_handedness = (results.multiHandedness || []).map(h => h.label || 'Right');
+                if (!results.multiHandLandmarks) return;
+                const now = performance.now();
+                const dt = (now - prevTime) / 1000;
+                prevTime = now;
+                if (dt <= 0 || dt > 0.5) return;
+                const threshold = parseFloat(sensitivitySlider.value);
+
+                // ---- Pass 1: collect strike candidates from hand-relative motion ----
+                const candidates = [];
+                for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                    const lm = results.multiHandLandmarks[h];
+                    const side = results.multiHandedness[h]?.label || 'Right';
+
+                    FINGERTIPS.forEach((fi) => {
+                        const key = side + '_' + fi;
+                        const mcp = TIP_TO_MCP[fi];
+                        // Fingertip vertical position relative to its own knuckle.
+                        const relY = lm[fi].y - lm[mcp].y;
+                        const prev = prevRelY[key];
+                        prevRelY[key] = relY;
+                        if (prev === undefined) { armed[key] = true; armRelY[key] = relY; return; }
+
+                        const relVel = (relY - prev) / dt;
+
+                        // Per-finger easing: ring/pinky/right-hand fingers need lower
+                        // thresholds to register consistently.
+                        const ease = FINGER_EASE[key] || 1.0;
+                        const velThreshold = threshold * ease;
+                        const minDistance = MIN_STRIKE_DISTANCE * ease;
+
+                        // Finger lifting back up -> re-arm and reset the distance baseline
+                        if (relVel < -(REARM_VELOCITY * ease)) {
+                            armed[key] = true;
+                            armRelY[key] = relY;
+                        }
+                        // While armed, keep the highest point (smallest relY) as launch baseline
+                        if (armed[key] && relY < (armRelY[key] != null ? armRelY[key] : relY)) {
+                            armRelY[key] = relY;
+                        }
+
+                        if (!armed[key]) return;
+                        if (now < (cooldowns[key] || 0)) return;
+                        if (relVel <= velThreshold) return; // not a fast-enough downward flick
+
+                        const distance = relY - (armRelY[key] != null ? armRelY[key] : relY);
+                        if (distance < minDistance) return; // didn't travel far enough
+
+                        candidates.push({ key, fi, side, lm, relVel, distance });
+                    });
+                }
+
+                if (candidates.length === 0) return;
+                // Whole-hand guard: many fingers crossing the threshold together is the
+                // hand entering/leaving frame, not deliberate presses -> ignore the frame.
+                if (candidates.length > MAX_SIMULTANEOUS_FINGERS) return;
+
+                // ---- Pass 2: fire the candidate strikes ----
+                candidates.forEach(c => {
+                    armed[c.key] = false;          // disarm until the finger lifts again
+                    cooldowns[c.key] = now + 250;  // debounce
+                    fireStrike(c, now, threshold);
+                });
+            };
+            // Expose the callback so the module-scoped Tasks loop can drive it.
+            window.__handleResults = handleResults;
+
+            function fireStrike(c, now, threshold) {
+                const { key, fi, lm, relVel } = c;
+                const mappedNote = FINGER_TO_NOTE[key]; // e.g. 'C4', 'C5'
+                if (!mappedNote) return; // Unmapped fingers do nothing
+                const baseLetter = mappedNote.replace(/[\d]/g, '').toUpperCase();
+
+                let finalNoteToPlay = mappedNote; // already includes the octave
+                let finalSpeedMult = 1.0;
+
+                // Map vertical zone to playback speed (2x, 1x, 0.5x) for FREE PLAY
+                const tipY = lm[fi].y;
+                if (tipY < 0.33) { finalSpeedMult = 2.0; } // High
+                else if (tipY > 0.66) { finalSpeedMult = 0.5; } // Low
+
+                // Free-play any mapped note until a song is started; once a song
+                // is playing, the strict guided check below takes over.
+                if (songPlaying && currentNoteIdx < songNotes.length) {
+                    const sn = songNotes[currentNoteIdx];
+                    let expectedLetter = sn.note.replace(/[\d]/g, '').toUpperCase();
+                    if (expectedLetter.includes('#') || expectedLetter.includes('B')) {
+                        expectedLetter = expectedLetter[0]; // naive fallback
+                    }
+
+                    // STRICT: only the correct finger/note makes a sound.
+                    if (baseLetter !== expectedLetter) {
+                        return; // wrong note -> no sound, no advance
+                    }
+
+                    // FORCE EXACT NOTE PLAYBACK from the song (proper sharps/octave)
+                    finalNoteToPlay = sn.note.toUpperCase();
+                    if (!/\d/.test(finalNoteToPlay)) {
+                        finalNoteToPlay += '4'; // Add default Octave 4 if missing
+                    }
+                    finalSpeedMult = 1.0;
+                }
+
+                const finalVel = Math.min(1.0, Math.abs(relVel) / (threshold * 3));
+                playNote(finalNoteToPlay, finalVel, finalSpeedMult);
+
+                // Jam Session Broadcast
+                if (window.jamSessionManager && window.jamSessionManager.connected) {
+                    window.jamSessionManager.sendNote(finalNoteToPlay, finalVel);
+                }
+
+                const px = lm[fi].x * canvasEl.width;
+                const py = lm[fi].y * canvasEl.height;
+                if (songPlaying) {
+                    hitFlashes.push({ x: px, y: py, t: now, note: finalNoteToPlay });
+                }
+
+                checkHit(finalNoteToPlay);
+            }
+
+            function checkHit(playedNote) {
+                if (!songPlaying || currentNoteIdx >= songNotes.length) return;
+                const sn = songNotes[currentNoteIdx];
+                if (!sn) return;
+
+                // Strict Note Checking based on Letter Mapping (ignoring Octave/Sharps for hits)
+                // Since the user is physically limited to exactly 1 finger per note letter using Fixed Mapping,
+                // we check if the base letter they played matches the base letter of the expected song note.
+
+                let targetLetter = sn.note.replace(/[\d]/g, '').toUpperCase();
+                if (targetLetter.includes('#') || targetLetter.includes('B')) {
+                    targetLetter = targetLetter[0]; // Convert F# -> F
+                }
+                const playedLetter = playedNote.replace(/[\d]/g, '').toUpperCase();
+
+                if (targetLetter === playedLetter) {
+                    score.hit++;
+                    currentNoteIdx++;
+                    updateScoreDisplay();
+                } else {
+                    // Ignore wrong notes entirely
+                }
+            }
+
+            /* ── Camera retry overlay helpers ──
+               The actual getUserMedia + MediaPipe Tasks HandLandmarker loop lives in
+               the <script type="module"> at the end of <body> (it needs ES-module
+               import of @mediapipe/tasks-vision). That module calls these overlay
+               helpers and window.__handleResults, so we expose them on window. The
+               "Enable camera" retry button re-invokes the module's start function
+               (window.__startHarmonicCamera). Auto-start is also handled in the module. */
+            const camOverlay = document.getElementById('camOverlay');
+            const camOverlayTitle = document.getElementById('camOverlayTitle');
+            const camOverlayHelp = document.getElementById('camOverlayHelp');
+            const camRetryBtn = document.getElementById('camRetryBtn');
+
+            function showCamOverlay(denied) {
+                if (camOverlayTitle) camOverlayTitle.textContent = denied
+                    ? 'Camera access blocked'
+                    : 'Turn on your camera to play Piano';
+                if (camOverlayHelp) camOverlayHelp.textContent = denied
+                    ? 'Camera permission was denied. Allow it in your browser, then tap below to start.'
+                    : "We couldn't reach your webcam. Make sure it's connected, then tap below to try again.";
+                if (camOverlay) camOverlay.classList.add('is-visible');
+            }
+            function hideCamOverlay() {
+                if (camOverlay) camOverlay.classList.remove('is-visible');
+            }
+            // Expose so the module-scoped Tasks loop can reuse the page's overlay UI.
+            window.__showCamOverlay = showCamOverlay;
+            window.__hideCamOverlay = hideCamOverlay;
+
+            // "Enable camera", a genuine user gesture: re-prompts for the webcam
+            // and (via the document-level listeners below) also unlocks audio.
+            if (camRetryBtn) {
+                camRetryBtn.addEventListener('click', () => {
+                    initAudio();                                 // gesture-based audio unlock
+                    if (camRetryBtn) camRetryBtn.setAttribute('disabled', '');
+                    const startFn = window.__startHarmonicCamera;
+                    Promise.resolve(startFn && startFn())        // re-run the Tasks start path
+                        .finally(() => { if (camRetryBtn) camRetryBtn.removeAttribute('disabled'); });
+                });
+            }
+
+            /* ── Start / Stop ── */
+            startBtn.addEventListener('click', async () => {
+                await initAudio(); // Ensure AudioContext is active on user interaction
+                if (songPlaying) { stopSong(); return; }
+                const sid = songSelect.value;
+                if (!sid) { alert('Please select a song first'); return; }
+                if (songNotes.length > 0) { startSong(); return; }
+                fetchSongAndStart(sid);
+            });
+
+            // Built-in songs are baked into /songs and served statically (no backend
+            // needed). Fall back to the music_api (:8766) only for songs it alone has,
+            // e.g. ones just uploaded this session.
+            function fetchSongAndStart(songId) {
+                midiStatus.textContent = 'Loading...';
+                const id = encodeURIComponent(songId);
+                fetch('../songs/' + id + '.json')
+                    .then(r => r.ok ? r.json() : Promise.reject())
+                    .catch(() => fetch(API + '/api/songs/' + id).then(r => {
+                        if (!r.ok) throw new Error('Song not found');
+                        return r.json();
+                    }))
+                    .then(data => {
+                        if (data && data.notes && data.notes.length) {
+                            songNotes = data.notes;
+                            midiStatus.textContent = songNotes.length + ' notes loaded';
+                            startSong();
+                        } else {
+                            midiStatus.textContent = 'No notes in song';
+                        }
+                    })
+                    .catch(() => { midiStatus.textContent = 'Song not found'; });
+            }
+
+            songSelect.addEventListener('change', () => {
+                if (songPlaying) stopSong();
+                songNotes = [];
+            });
+
+            /* ── Add any extra songs from the static catalogue (no backend needed) ── */
+            fetch('../songs/index.json')
+                .then(r => r.json())
+                .then(data => {
+                    (data.songs || []).forEach(id => {
+                        if (songSelect.querySelector('option[value="' + id + '"]')) return;
+                        const opt = document.createElement('option');
+                        opt.value = id;
+                        opt.textContent = id.replace(/_/g, ' ');
+                        songSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => { });
+
+            /* ── MIDI Upload with Track Picker ── */
+            midiUploadBtn.addEventListener('click', () => midiFileInput.click());
+
+            midiFileInput.addEventListener('change', () => {
+                const file = midiFileInput.files[0];
+                if (!file) return;
+                midiStatus.textContent = 'Uploading MIDI...';
+                const fd = new FormData();
+                fd.append('file', file);
+
+                fetch(API + '/api/upload-midi', { method: 'POST', body: fd })
+                    .then(function (r) {
+                        return r.text().then(function (text) {
+                            var data;
+                            try { data = text ? JSON.parse(text) : {}; } catch (e) {
+                                throw new Error(r.status + ' ' + (r.statusText || '') + (text ? ': ' + text.slice(0, 80) : ''));
+                            }
+                            if (!r.ok) {
+                                var msg = (data && (data.detail || data.error)) || r.statusText || 'Server error';
+                                throw new Error(typeof msg === 'string' ? msg : (msg.message || JSON.stringify(msg)));
+                            }
+                            return data;
+                        });
+                    })
+                    .then(function (data) {
+                        if (data.error) { midiStatus.textContent = 'Error: ' + data.error; return; }
+                        // music_api returns { notes, song_id, note_count, ... }
+                        if (data.notes && data.notes.length) {
+                            songNotes = data.notes;
+                            midiStatus.textContent = data.note_count + ' notes loaded';
+                            // Add to dropdown
+                            let opt = songSelect.querySelector('option[value="' + data.song_id + '"]');
+                            if (!opt) {
+                                opt = document.createElement('option');
+                                opt.value = data.song_id;
+                                opt.textContent = (data.song_id || 'imported').replace(/_/g, ' ') + ' (MIDI)';
+                                songSelect.appendChild(opt);
+                            }
+                            songSelect.value = data.song_id;
+                        } else {
+                            midiStatus.textContent = 'No notes found in MIDI';
+                        }
+                    })
+                    .catch(function (e) {
+                        midiStatus.textContent = e && e.message ? ('Upload failed: ' + e.message) : 'Upload failed, is the server running on ' + API + '?';
+                    });
+                midiFileInput.value = '';
+            });
+
+            function showTrackPicker(midiId, tracks) {
+                trackList.innerHTML = '';
+                if (!tracks.length) { midiStatus.textContent = 'No tracks found'; return; }
+                const hasPiano = tracks.some(t => t.family === 'piano' && !t.is_drum);
+
+                if (hasPiano) {
+                    const pb = document.createElement('button');
+                    pb.style.cssText = 'width:100%;text-align:left;padding:12px 16px;background:rgba(0,255,136,0.15);border:1px solid rgba(0,255,136,0.4);border-radius:10px;color:#fff;cursor:pointer;font-size:0.9rem;';
+                    const pc = tracks.filter(t => t.family === 'piano' && !t.is_drum).reduce((s, t) => s + t.note_count, 0);
+                    pb.innerHTML = '<strong style="color:#00ff88;">Piano Only</strong><br><span style="color:#888;font-size:0.8rem;">Extracts piano tracks (' + pc + ' notes)</span>';
+                    pb.onclick = () => extractAndLoad(midiId, { family: 'piano' });
+                    trackList.appendChild(pb);
+                }
+
+                const ab = document.createElement('button');
+                ab.style.cssText = 'width:100%;text-align:left;padding:12px 16px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:10px;color:#fff;cursor:pointer;font-size:0.9rem;';
+                const ac = tracks.reduce((s, t) => s + (t.is_drum ? 0 : t.note_count), 0);
+                ab.innerHTML = '<strong style="color:#00ff88;">All Tracks</strong><br><span style="color:#888;font-size:0.8rem;">All instruments (' + ac + ' notes)</span>';
+                ab.onclick = () => extractAndLoad(midiId, {});
+                trackList.appendChild(ab);
+
+                tracks.forEach(t => {
+                    if (t.is_drum) return;
+                    const btn = document.createElement('button');
+                    btn.style.cssText = 'width:100%;text-align:left;padding:12px 16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:10px;color:#fff;cursor:pointer;font-size:0.9rem;';
+                    const badge = t.family === 'piano' ? ' <span style="color:#00ff88;">[Piano]</span>' : '';
+                    btn.innerHTML = '<strong>' + (t.name || t.program_name) + badge + '</strong><br><span style="color:#888;font-size:0.8rem;">' + t.program_name + ', ' + t.note_count + ' notes</span>';
+                    btn.onclick = () => extractAndLoad(midiId, { track_index: t.index });
+                    trackList.appendChild(btn);
+                });
+                trackPickerOverlay.style.display = 'flex';
+            }
+
+            trackPickerCancel.addEventListener('click', () => {
+                trackPickerOverlay.style.display = 'none';
+                midiStatus.textContent = '';
+            });
+
+            function extractAndLoad(midiId, opts) {
+                trackPickerOverlay.style.display = 'none';
+                midiStatus.textContent = 'Extracting...';
+                fetch(API + '/api/extract-track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ midi_id: midiId, ...opts }),
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.success) { midiStatus.textContent = 'Error: ' + (data.error || ''); return; }
+                        songNotes = data.notes;
+                        midiStatus.textContent = data.note_count + ' notes loaded';
+                        let opt = songSelect.querySelector('option[value="' + data.song_id + '"]');
+                        if (!opt) {
+                            opt = document.createElement('option');
+                            opt.value = data.song_id;
+                            opt.textContent = (data.song_id || 'imported').replace(/_/g, ' ') + ' (MIDI)';
+                            songSelect.appendChild(opt);
+                        }
+                        songSelect.value = data.song_id;
+                    })
+                    .catch(() => { midiStatus.textContent = 'Extract failed'; });
+            }
+
+            // Robust audio unlock: browsers only let an AudioContext produce sound
+            // after a real user gesture ON the page. Allowing the camera prompt does
+            // NOT count, so listen for several gesture types and keep trying until
+            // the context is actually running.
+            async function unlockAudio() {
+                await initAudio();
+                if (audioCtx && audioCtx.state === 'running') {
+                    ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'click'].forEach(
+                        ev => document.removeEventListener(ev, unlockAudio)
+                    );
+                    console.log('[DEBUG] AudioContext unlocked (running)');
+                }
+            }
+            ['pointerdown', 'mousedown', 'touchstart', 'keydown', 'click'].forEach(
+                ev => document.addEventListener(ev, unlockAudio)
+            );
+        });
+    </script>
+
+    <!-- ============================================================
+         MODERN HAND TRACKING, MediaPipe Tasks HandLandmarker
+         Replaces the deprecated @mediapipe/hands + camera_utils CDN
+         solution. Loads the LOCAL bundled model at /play/hand_landmarker.task
+         and drives the page's EXISTING onResults callback (window.__handleResults)
+         with the SAME { multiHandLandmarks, multiHandedness } shape.
+         ============================================================ -->
+    <script type="module">
+        import { HandLandmarker, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18';
+
+        const video = document.getElementById('playerVideo');   // the existing <video>
+        let landmarker = null, lastVideoTime = -1, running = false;
+
+        // Reuse the page's existing overlay helpers / note-detection callback,
+        // exposed on window by the classic DOMContentLoaded script above.
+        const hideCamOverlay = (denied) => { if (window.__hideCamOverlay) window.__hideCamOverlay(denied); };
+        const showCamOverlay = (denied) => { if (window.__showCamOverlay) window.__showCamOverlay(denied); };
+        const handleResults = (results) => { if (window.__handleResults) window.__handleResults(results); };
+
+        async function initLandmarker() {
+            const fileset = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm');
+            try {
+                landmarker = await HandLandmarker.createFromOptions(fileset, {
+                    baseOptions: { modelAssetPath: '/play/hand_landmarker.task', delegate: 'GPU' },
+                    runningMode: 'VIDEO', numHands: 2,
+                });
+            } catch (e) {                       // some machines lack the GPU delegate
+                landmarker = await HandLandmarker.createFromOptions(fileset, {
+                    baseOptions: { modelAssetPath: '/play/hand_landmarker.task', delegate: 'CPU' },
+                    runningMode: 'VIDEO', numHands: 2,
+                });
+            }
+        }
+
+        async function startCamera() {
+            try {
+                if (!landmarker) await initLandmarker();
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 960 }, height: { ideal: 720 } } });
+                video.srcObject = stream;
+                await video.play();
+                hideCamOverlay();               // live mirrored video is now showing
+                running = true;
+                requestAnimationFrame(loop);
+            } catch (e) {
+                console.error('[CV] camera/init failed', e);
+                const denied = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' || e.name === 'PermissionDeniedError');
+                showCamOverlay(denied);
+            }
+        }
+
+        function loop() {
+            if (running && landmarker && video.readyState >= 2) {
+                const now = performance.now();
+                // detectForVideo needs a strictly increasing ms timestamp AND only when the
+                // video frame actually advanced, otherwise it throws a "timestamp" error.
+                if (video.currentTime !== lastVideoTime) {
+                    lastVideoTime = video.currentTime;
+                    let res;
+                    try { res = landmarker.detectForVideo(video, now); } catch (e) { res = null; }
+                    if (res) {
+                        // The selfie display is CSS-mirrored (transform: scaleX(-1)); flip x so
+                        // the tracked landmarks line up with what the user sees.
+                        const multiHandLandmarks = (res.landmarks || []).map(h => h.map(p => ({ x: 1 - p.x, y: p.y, z: p.z })));
+                        const multiHandedness = (res.handednesses || []).map(h => ({ label: (h && h[0] && h[0].categoryName) || 'Right' }));
+                        handleResults({ multiHandLandmarks, multiHandedness });
+                    }
+                }
+            }
+            requestAnimationFrame(loop);
+        }
+
+        // Expose so the camera-denied retry button can re-run the real start path.
+        window.__startHarmonicCamera = startCamera;
+        // AUTO-START on load.
+        startCamera();
+    </script>
+</body>
+
+</html>
